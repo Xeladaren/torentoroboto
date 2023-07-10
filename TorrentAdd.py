@@ -277,13 +277,13 @@ class TorrentAdd:
             percent_done = 0
             is_stoped = False
 
-            while percent_done < 1 and not is_stopped:
+            while percent_done < 1 and not is_stoped:
                 torrent = self._trans_client.get_torrent(torrent.hashString)
                 try:
                     Print.Custom("TORRENT", "Downloading : {} {} {} %".format(torrent.name, torrent.status, int(torrent.percent_done * 100)), title_color=Print.COLOR_GREEN)
                     percent_done = torrent.percent_done
-                    is_stopped = torrent.status == "stopped"
-                    if percent_done == 1 or is_stopped:
+                    is_stoped = torrent.status == "stopped"
+                    if percent_done == 1 or is_stoped:
                         break
                 except:
                     Print.Custom("TORRENT", "Downloading : {}".format(torrent.name), title_color=Print.COLOR_GREEN)
