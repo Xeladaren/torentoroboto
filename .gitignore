@@ -1,0 +1,5 @@
+config.ini
+files-done.log
+files-error.log
+rss-readed.log
+__pycache__/
