@@ -214,10 +214,8 @@ class ParseSeries:
                 return self._getTVDBInfoSerie(name)
 
             for tag in tag_list:
-                print(tag, name)
                 if re.search(tag, name, flags=re.I):
                     name = re.sub(tag, "", name, flags=re.I)
-                    print(name)
                     return self._getTVDBInfoSerie(name)
 
             return (None, None)
