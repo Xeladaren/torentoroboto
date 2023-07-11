@@ -197,7 +197,7 @@ class ParseSeries:
 
     def _getTVDBInfoSerie(self, name, year=None):
 
-        tag_list = ["\bus\b", "\bmulti\b", "\bvff\b", "\b\d+p\b"]
+        tag_list = ["\\bus\\b", "\\bmulti\\b", "\\bvff\\b", "\\b\d+p\\b"]
 
         if year != None:
             resultList = self._tvdb.search(name, type="series", year=year)
@@ -211,12 +211,14 @@ class ParseSeries:
         else:
             Print.Custom("TvDB", "Serie not found: {}".format(name), title_color=Print.COLOR_RED, start="\t", always_print=True)
             if year:
-                return getTVDBInfoSerie(name)
+                return self._getTVDBInfoSerie(name)
 
             for tag in tag_list:
+                print(tag, name)
                 if re.search(tag, name, flags=re.I):
                     name = re.sub(tag, "", name, flags=re.I)
-                    return getTVDBInfoSerie(name)
+                    print(name)
+                    return self._getTVDBInfoSerie(name)
 
             return (None, None)
 
