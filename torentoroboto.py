@@ -65,6 +65,12 @@ def setConfigs():
     if "discord" in config and "WebhookURL" in config["discord"]:
         parseSeries.discord_webhook = config["discord"]["WebhookURL"]
 
+    if "jellyfin" in config and "APIKey" in config["jellyfin"]:
+        parseSeries.jellyfin_api = config["jellyfin"]["APIKey"]
+
+    if "jellyfin" in config and "ServerURL" in config["jellyfin"]:
+        parseSeries.jellyfin_url = config["jellyfin"]["ServerURL"]
+
     if "log" in config and "DoneFiles" in config["log"]:
         parseSeries.log_file_done   = config["log"]["DoneFiles"]
 
@@ -107,8 +113,7 @@ if __name__ == '__main__':
     if args.daemon:
         Print.Custom("DAEMON", "Start in Daemon mode", title_color=Print.COLOR_GREEN, always_print=True)
 
-    runAll = True
-    while runAll:
+    while True:
 
         runAll = args.daemon
 
@@ -130,9 +135,13 @@ if __name__ == '__main__':
             Print.Error("Error no IdleTime, stop".format(ex))
             break
 
-        Print.Custom("DAEMON", "Wait for {} minutes".format(idleTime), title_color=Print.COLOR_GREEN, always_print=True)
+        if args.daemon:
 
-        while idleTime > 0:
-            time.sleep(60)
-            idleTime -= 1
-            Print.Custom("DAEMON", "Wait for {} minutes".format(idleTime), title_color=Print.COLOR_GREEN)
+            Print.Custom("DAEMON", "Wait for {} minutes".format(idleTime), title_color=Print.COLOR_GREEN, always_print=True)
+
+            while idleTime > 0:
+                time.sleep(60)
+                idleTime -= 1
+                Print.Custom("DAEMON", "Wait for {} minutes".format(idleTime), title_color=Print.COLOR_GREEN)
+        else:
+            break

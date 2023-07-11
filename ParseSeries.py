@@ -7,6 +7,7 @@ import shutil
 import discord_webhook
 import human_readable
 import time
+import jellyfinapi.jellyfinapi_client
 
 import Print
 import Notifs
@@ -24,9 +25,12 @@ class ParseSeries:
         self.scan_dir        = None
         self.output_dir      = None
         self.file_action     = None
+        self.jellyfin_api    = None
+        self.jellyfin_url    = None
 
-        self._tvdb           = None
-        self._added_file_count = 0
+        self._tvdb               = None
+        self._added_file_count   = 0
+        self._updated_serie_list = []
 
     def initTvDB(self, api_key, acount_pin):
         self._tvdb = tvdb_v4_official.TVDB(api_key, acount_pin)
@@ -201,7 +205,7 @@ class ParseSeries:
         if len(resultList) > 0:
             result = resultList[0]
             Print.Custom("TvDB", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(result["id"], result["slug"], result["name"], result["slug"]), title_color=Print.COLOR_GREEN, always_print=True, start="\t")
-            return result["slug"]
+            return (result["slug"], result["tvdb_id"])
         else:
             Print.Custom("TvDB", "Serie not found: {}".format(name), title_color=Print.COLOR_RED, start="\t", always_print=True)
             if year:
@@ -242,7 +246,7 @@ class ParseSeries:
 
             Print.Custom("MATCH", "File match: Serie '{}' Year {} Season {} Episode {}".format(nameFormated, year, season, episode), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
             if self._tvdb:
-                serieNameOutFile = self._getTVDBInfoSerie(nameFormated, year=year)
+                (serieNameOutFile, serieId) = self._getTVDBInfoSerie(nameFormated, year=year)
                 if serieNameOutFile == None:
                     self._writeLogFile("TvDB not found", fileName)
                     return
@@ -251,6 +255,8 @@ class ParseSeries:
 
             self._doActionOnFile(fileName, serieNameOutFile, season, episode)
             self._added_file_count += 1
+            if not serieId in self._updated_serie_list:
+                self._updated_serie_list += [serieId]
         else:
             Print.Custom("MATCH", "File not match: {}".format(basename), title_color=Print.COLOR_RED, start="\t")
             self._writeLogFile("File not match", fileName)
@@ -280,12 +286,30 @@ class ParseSeries:
             else:
                 Print.Custom("SCANN", "Not file or dir: {}".format(file), title_color=Print.COLOR_RED)
 
+    def _updateJellyfin(self):
+        if self.jellyfin_api and self.jellyfin_url:
+            try:
+                jellyfin_client = jellyfinapi.jellyfinapi_client.JellyfinapiClient(x_emby_token=self.jellyfin_api, server_url=self.jellyfin_url)
+
+                for serie in self._updated_serie_list:
+                    Print.Custom("JELLYFIN", "Update Jellyfin serie: {}".format(serie), title_color=Print.COLOR_GREEN, always_print=True)
+                    jellyfin_client.library.post_updated_series(tvdb_id=serie)
+
+            except Exception as ex:
+                Print.Error("Fail to update jellyfin series : {}".format(ex))
+                Notifs.sendNotif("**Fail to update jellyfin series**: {}".format(ex), always_print=True)
+
+        else:
+            Print.Warning("No Jellyfin API link.")
+
+
     def scanAll(self):
         if self.scan_dir and os.path.isdir(self.scan_dir):
 
             Print.Custom("SCANN", "Scan all", title_color=Print.COLOR_GREEN, always_print=True)
 
-            self._added_file_count = 0
+            self._added_file_count   = 0
+            self._updated_serie_list = []
 
             self._sendNotifStart()
             self._scanDir(self.scan_dir)
@@ -293,6 +317,7 @@ class ParseSeries:
 
             Print.Custom("SCANN", "Scan end : {} file added".format(self._added_file_count), title_color=Print.COLOR_GREEN, always_print=True)
 
+            self._updateJellyfin()
             return self._added_file_count
 
         else:
