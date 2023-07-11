@@ -197,6 +197,8 @@ class ParseSeries:
 
     def _getTVDBInfoSerie(self, name, year=None):
 
+        tag_list = ["\bus\b", "\bmulti\b", "\bvff\b", "\b\d+p\b"]
+
         if year != None:
             resultList = self._tvdb.search(name, type="series", year=year)
         else:
@@ -210,9 +212,13 @@ class ParseSeries:
             Print.Custom("TvDB", "Serie not found: {}".format(name), title_color=Print.COLOR_RED, start="\t", always_print=True)
             if year:
                 return getTVDBInfoSerie(name)
-            elif "US" in name:
-                return getTVDBInfoSerie(name.replace("US", ""))
-            return None
+
+            for tag in tag_list:
+                if re.search(tag, name, flags=re.I):
+                    name = re.sub(tag, "", name, flags=re.I)
+                    return getTVDBInfoSerie(name)
+
+            return (None, None)
 
     def _parseSerieName(self, fileName):
         basename = os.path.basename(fileName)
