@@ -309,6 +309,7 @@ class TorrentAdd:
             for entrie in feeds["entries"]:
                 if not self._isReededRSSPost(entrie):
                     Print.Custom("RSS", "Unreaded post : {}".format(entrie["title"]), title_color=Print.COLOR_GREEN, always_print=True)
+                    Notifs.sendNotif("**Unreaded post**: {}".format(entrie["title"]))
                     self._addReededRSSPost(entrie)
                     result = self._parseSerieName(entrie["title"], entrie["id"])
                     if result and self._checkIfNeeded(result[0], result[1], result[2]):
