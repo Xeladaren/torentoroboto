@@ -8,6 +8,8 @@ import transmission_rpc
 import discord_webhook
 import time
 import human_readable
+import unidecode
+import string
 
 import Notifs
 import Print
@@ -103,12 +105,46 @@ class TorrentAdd:
                 return (result[0], season, episode, result[1])
         return None
 
+    def _getNormalizedName(self, name, no_space=True, add_year=True, add_tvdbid=True):
+
+        serie_infos = self._getTVDBInfoSerie(name)
+#        print(serie_infos)
+#        quit(1)
+        if serie_infos[0]:
+            name_normalized = unidecode.unidecode(serie_infos[1]["name"])
+            name_normalized = string.capwords(name_normalized)
+
+            if add_year:
+                name_normalized = re.sub(r"\s*\(\d{4}\)\s*$", "", name_normalized)
+
+            if no_space:
+
+                name_normalized = re.sub("\s*-\s*", "-", name_normalized)
+                name_normalized = re.sub("\s+", "_", name_normalized)
+                name_normalized = re.sub("(?=\W)[^-]", "", name_normalized)
+
+                if add_year:
+                    name_normalized = "{}.{}".format(name_normalized, serie_infos[1]["year"])
+
+                if add_tvdbid:
+                    name_normalized = "{}.tvdbid-{}".format(name_normalized, serie_infos[1]["tvdb_id"])
+
+            else:
+                if add_year:
+                    name_normalized = "{} ({})".format(name_normalized, serie_infos[1]["year"])
+
+                if add_tvdbid:
+                    name_normalized = "{} [tvdbid-{}]".format(name_normalized, serie_infos[1]["tvdb_id"])
+
+            print("slug='{}' name='{}'".format(name, name_normalized))
+
     def _getSeriesList(self):
         if self._serieList == None and os.path.isdir(self.series_dir):
 
             self._serieList = {}
             for serie_dir in os.listdir(self.series_dir):
 
+                self._getNormalizedName(serie_dir)
                 self._serieList[serie_dir] = []
                 serie_dir_path = os.path.join(self.series_dir, serie_dir)
 
@@ -120,6 +156,7 @@ class TorrentAdd:
 
                         matchSerie = re.match("^.*S(?P<season>\d+)E(?P<episode>\d+)", episode_file)
                         self._serieList[serie_dir] += [(int(matchSerie["season"]), int(matchSerie["episode"]))]
+            quit(1)
 
 
 
@@ -272,6 +309,7 @@ class TorrentAdd:
     def waitDownloadTorrents(self):
 
         Print.Custom("TORRENT", "Wait Download Torrents", title_color=Print.COLOR_GREEN, always_print=True)
+        self._getSeriesList()
 
         for torrent in self._addedTorrentList:
             percent_done = 0
