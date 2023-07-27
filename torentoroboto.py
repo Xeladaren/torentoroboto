@@ -123,8 +123,9 @@ if __name__ == '__main__':
         try:
             startOneRun()
         except Exception as ex:
-            Print.Error("Error to run all : {}".format(ex))
-            Notifs.sendNotif("**Error to run all**: {}".format(ex), always_print=True)
+            traceback_str = traceback.format_exc()
+            Print.Error("Error to run all : {}\n{}".format(ex, traceback_str))
+            Notifs.sendNotif("**Error to run all**: {}\n{}".format(ex, traceback_str), always_print=True)
 
         Notifs.sendNotif("**End All**")
         Print.Custom("DAEMON", "End all", title_color=Print.COLOR_GREEN, always_print=True)
