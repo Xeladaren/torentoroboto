@@ -4,6 +4,7 @@ import argparse
 import argcomplete
 import configparser
 import time
+import traceback
 
 import ParseSeries
 import TorrentAdd
