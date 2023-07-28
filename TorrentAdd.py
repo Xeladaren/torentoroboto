@@ -286,17 +286,15 @@ class TorrentAdd:
                     Print.Custom("TORRENT", "Download error : {}".format(torrent.name), title_color=Print.COLOR_RED, always_print=True)
                     self._sendEndDownloadNotif(torrent.name, is_stoped=False, is_error=True)
                     self._addedTorrentList.remove(torrent)
-                    continue
+                    break
 
                 try:
                     Print.Custom("TORRENT", "Downloading : {} {} {} %".format(torrent_update.name, torrent_update.status, int(torrent_update.percent_done * 100)), title_color=Print.COLOR_GREEN)
                     percent_done = torrent_update.percent_done
                     is_stoped = torrent_update.status == "stopped"
-                    if percent_done == 1 or is_stoped:
-                        break
+
                 except:
                     Print.Custom("TORRENT", "Downloading : {}".format(torrent.name), title_color=Print.COLOR_RED)
-                    break
 
                 if percent_done == 1:
                     Print.Custom("TORRENT", "Download end : {}".format(torrent.name), title_color=Print.COLOR_GREEN, always_print=True)
