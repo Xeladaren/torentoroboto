@@ -11,6 +11,7 @@ import jellyfinapi.jellyfinapi_client
 
 import Print
 import Notifs
+import SeriesEpisodes
 
 if __name__ == '__main__':
     Print.Error("this file can't be run alone.")
@@ -148,16 +149,14 @@ class ParseSeries:
             pass
         Print.Custom("TRANSFERT", "Transfert Done", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
 
-
-    def _doActionOnFile(self, file, serieName, seasonNum, episodeNum):
+    def _doActionOnFile(self, file, serie_episode):
 
         if not self.output_dir:
             Print.Error("Output not found")
 
-        outputDir  = os.path.join(self.output_dir, serieName, "S{:02}".format(seasonNum))
         outputExt  = os.path.splitext(file)[1]
-        outputName = "{}.S{:02}E{:02}{}".format(serieName, seasonNum, episodeNum, outputExt)
-        outputPath = os.path.join(outputDir, outputName)
+        outputFile = serie_episode.getFullPath(file_extension=outputExt)
+        outputPath = os.path.join(self.output_dir, outputFile)
 
         if self.file_action == "none":
             Print.Custom("OUTPUT", "Do nothing: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t")
@@ -223,41 +222,11 @@ class ParseSeries:
     def _parseSerieName(self, fileName):
         basename = os.path.basename(fileName)
 
-        regexList = [
-            "^(?P<name>.*)[Ss](?P<season>\d+)[Ee](?P<episode>\d+)",
-            "^(?P<name>.*)S(?P<season>\d+)x(?P<episode>\d+)",
-            "^(?P<name>.*)(?P<season>\d+)x(?P<episode>\d+)"
-        ]
-        matchSerie = None
+        serieEpisode = SeriesEpisodes.SerieEpisode.findEpisodeByFileName(basename)
 
-        for regex in regexList:
-            matchSerie = re.match(regex, basename)
-            if matchSerie != None:
-                break
+        if serieEpisode:
+            Print.Custom(f"MATCH", "File match: Serie '{serieEpisode}'", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
 
-        if matchSerie != None:
-            name = matchSerie["name"]
-            season = int(matchSerie["season"])
-            episode = int(matchSerie["episode"])
-
-            matchYear = re.match("(?P<name>.*)\W(?P<year>(19\d{2})|(20\d{2}))", name)
-            if matchYear != None:
-                name = matchYear["name"]
-                year = matchYear["year"]
-            else:
-                year = None
-
-            nameFormated = re.sub("[\W_]*$", "", name)
-            nameFormated = re.sub("\W+", " ", nameFormated)
-
-            Print.Custom("MATCH", "File match: Serie '{}' Year {} Season {} Episode {}".format(nameFormated, year, season, episode), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
-            if self._tvdb:
-                (serieNameOutFile, serieId) = self._getTVDBInfoSerie(nameFormated, year=year)
-                if serieNameOutFile == None:
-                    self._writeLogFile("TvDB not found", fileName)
-                    return
-            else:
-                serieNameOutFile = re.sub("\W+", "-", nameFormated).lower()
 
             self._doActionOnFile(fileName, serieNameOutFile, season, episode)
             self._added_file_count += 1

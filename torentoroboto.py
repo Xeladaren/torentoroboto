@@ -9,6 +9,7 @@ import ParseSeries
 import TorrentAdd
 import Print
 import Notifs
+import Series
 
 config      = None
 torrentAdd  = TorrentAdd.TorrentAdd()
@@ -18,8 +19,8 @@ def startOneRun():
 
     # Find new files
 
-    torrentAdd.readFeeds()
-    torrentAdd.waitDownloadTorrents()
+#    torrentAdd.readFeeds()
+#    torrentAdd.waitDownloadTorrents()
 
     # Parce download serie dir.
 
@@ -59,6 +60,7 @@ def setConfigs():
     if "tvdb" in config and "EnableSearch" in config["tvdb"] and config["tvdb"]["EnableSearch"] == "yes" :
         if "ApiKey" in config["tvdb"] and "ApiPIN" in config["tvdb"]:
                 torrentAdd.initTvDB(config["tvdb"]["ApiKey"], config["tvdb"]["ApiPIN"])
+                Series.Serie.initTvDB(config["tvdb"]["ApiKey"], config["tvdb"]["ApiPIN"])
 
     # Set config for ParseSeries
 

@@ -13,9 +13,8 @@ class Serie:
 
     @staticmethod
     def initTvDB(api_key, acount_pin):
-        if Serie.tvdb:
-            del Serie.tvdb
-        Serie.tvdb = tvdb_v4_official.TVDB(api_key, acount_pin)
+        if not Serie.tvdb:
+            Serie.tvdb = tvdb_v4_official.TVDB(api_key, acount_pin)
 
 
     @staticmethod
@@ -49,40 +48,58 @@ class Serie:
                 if serie == int(serieFountTvdb["tvdb_id"]):
                     return serie
 
-            newSerie = Serie(serieFountTvdb["name"], int(serieFountTvdb["tvdb_id"]), serieFountTvdb)
+            newSerie = Serie.findSerieById(int(serieFountTvdb["tvdb_id"]))
             Serie.seriesList.append(newSerie)
 
             return newSerie
         else:
+            Print.Error("[Serie] TVDB not initialised")
             return None
 
     @staticmethod
-    def findSerieById(id, year=None):
+    def findSerieById(id):
 
         for serie in Serie.seriesList:
             if serie == id:
                 return serie
 
+        return Serie(id)
+
+    @staticmethod
+    def findSerieBySlug(slug):
+
+        for serie in Serie.seriesList:
+            if serie.tvdb_info["slug"] == slug:
+                return serie
+
         if Serie.tvdb:
-            serieFountTvdb = Serie.tvdb.get_series(id)
+            serieFountTvdb = Serie.tvdb.get_series_by_slug(slug)
 
-            newSerie = Serie(serieFountTvdb["name"], int(serieFountTvdb["tvdb_id"]), serieFountTvdb)
-            Serie.seriesList.append(newSerie)
+            if serieFountTvdb:
+                newSerie = Serie.findSerieById(serieFountTvdb["id"])
 
-            return newSerie
+                return newSerie
+            else:
+                return None
         else:
             return None
 
 
-    def __init__(self, name, id, tvdb_info):
-        print(f"New Serie : {name} ({id})")
-        print(type(name), type(id))
-        self.name      = name
-        self.id        = id
-        self.tvdb_info = tvdb_info
+    def __init__(self, id):
+
+        serieTvdb = Serie.tvdb.get_series(id)
+
+        if serieTvdb:
+            self.name      = serieTvdb["name"]
+            self.id        = serieTvdb["id"]
+            self.tvdb_info = serieTvdb
+            self.name_normalized = None
+
+            Serie.seriesList.append(self)
+        else:
+            del self
 
     def __eq__(self, other):
-        print(f"{self.name} (type={type(self.name)}) == {other} (type={type(other)})")
 
         if    type(other) == Serie:
             return self.id == other.id
@@ -102,10 +119,53 @@ class Serie:
     def __format__(self, formatStr):
         return self.name
 
-    def getNormalizedName(self, no_space=False, add_year=True, add_tvdbid=True):
+    def __normaliseAndCheck(self, name):
 
-        name_normalized = unidecode.unidecode(self.name)
+        name_normalized = unidecode.unidecode(name)
         name_normalized = string.capwords(name_normalized)
+
+        resultList = Serie.tvdb.search(name_normalized, type="series")
+
+        if len(resultList) > 0:
+            if int(resultList[0]["tvdb_id"]) == self.id:
+                return name_normalized
+
+        name_eng = self.getTranslateName()
+        if name_eng:
+            name_normalized = unidecode.unidecode(name_eng)
+            name_normalized = string.capwords(name_normalized)
+
+            resultList = Serie.tvdb.search(name_normalized, type="series")
+
+            if len(resultList) > 0:
+                if int(resultList[0]["tvdb_id"]) == self.id:
+                    return name_normalized
+
+        name_normalized = self.tvdb_info["slug"].replace("-", " ")
+        name_normalized = string.capwords(name_normalized)
+
+        return None
+
+    def getTranslateName(self, lang="eng"):
+
+        if lang in self.tvdb_info["nameTranslations"]:
+            translation = Serie.tvdb.get_series_translation(self.id, lang)
+
+            if "name" in translation:
+                return translation["name"]
+
+        return None
+
+    def getNormalizedName(self):
+
+        if not self.name_normalized:
+            self.name_normalized = self.__normaliseAndCheck(self.name)
+
+        return self.name_normalized
+
+    def getFolderName(self, no_space=False, add_year=True, add_tvdbid=True):
+
+        name_normalized = self.getNormalizedName()
 
         if add_year:
             name_normalized = re.sub(r"\s*\(\d{4}\)\s*$", "", name_normalized)
@@ -120,13 +180,13 @@ class Serie:
                 name_normalized = "{}.{}".format(name_normalized, self.tvdb_info["year"])
 
             if add_tvdbid:
-                name_normalized = "{}.tvdbid-{}".format(name_normalized, self.tvdb_info["tvdb_id"])
+                name_normalized = "{}.tvdbid-{}".format(name_normalized, self.id)
 
         else:
             if add_year:
                 name_normalized = "{} ({})".format(name_normalized, self.tvdb_info["year"])
 
             if add_tvdbid:
-                name_normalized = "{} [tvdbid-{}]".format(name_normalized, self.tvdb_info["tvdb_id"])
+                name_normalized = "{} [tvdbid-{}]".format(name_normalized, self.id)
 
-        print("name='{}' name_normalized='{}'".format(self.name, name_normalized))
+        return name_normalized
