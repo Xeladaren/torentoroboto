@@ -4,9 +4,14 @@ import unidecode
 import string
 import re
 import os
+import discord_webhook
 
 import Series
 import Print
+
+if __name__ == '__main__':
+    Print.Error("this file can't be run alone.")
+    quit(1)
 
 regexList = [
     "^(?P<name>.*)[Ss](?P<season>\d+)[Ee](?P<episode>\d+)",
@@ -49,14 +54,12 @@ class SerieEpisode:
             nameFormated = re.sub("[\W_]*$", "", name)
             nameFormated = re.sub("\W+", " ", nameFormated)
 
-            Print.Custom("Episode", "File match: Serie '{}' Year {} Season {} Episode {}".format(nameFormated, year, season, episode), title_color=Print.COLOR_GREEN)
+            Print.Custom("Episode", f"File match: Serie '{nameFormated}' Year {year} Season {season} Episode {episode}", title_color=Print.COLOR_GREEN)
 #           Print.Custom("LINK", "{}".format(url), title_color=Print.COLOR_GREEN, start="\t")
 
-            serie = Series.Serie.findSerieByName(nameFormated)
-            print(f"Serie found {serie}")
+            serie = Series.Serie.findSerieByName(nameFormated, year=year)
 
             if serie:
-                print(f"Serie {serie} Season {season} Episode {episode}")
                 return SerieEpisode.findEpisodeBySerie(serie, season, episode)
 
             return None
@@ -78,6 +81,16 @@ class SerieEpisode:
         self.serie      = serie
         self.season     = int(season)
         self.episode    = int(episode)
+        self.tvdb_info  = None
+
+        self.__getEpisodeInfo()
+
+    def __eq__(self, other):
+
+        if    type(other) == SerieEpisode:
+            return self.serie == other.serie and self.season == other.season and self.episode == other.episode
+        else:
+            return False
 
     def __repr__(self):
         return f"SerieEpisode(name='{self.serie.name}', season={self.season}, episode={self.episode})"
@@ -88,8 +101,18 @@ class SerieEpisode:
     def __format__(self, formatStr):
         return self.getFileName()
 
+    def __hash__(self):
+        return hash((self.serie, self.season, self.episode))
+
     def __getEpisodeInfo(self):
-        pass
+
+        episodeList = Series.Serie.tvdb.get_series_episodes(self.serie.id)
+
+        for item in episodeList["episodes"]:
+            if item["seasonNumber"] == self.season and item["number"] == self.episode:
+
+                self.tvdb_info = item
+                return
 
     def getFileName(self, simple=True, file_extension=""):
 
@@ -115,3 +138,63 @@ class SerieEpisode:
         episode_file = self.getFileName(simple=simple_episode, file_extension=file_extension)
 
         return os.path.join(serie_dir, season_dir, episode_file)
+
+    def getTranslateName(self, lang="eng"):
+
+        if lang in self.tvdb_info["nameTranslations"]:
+            translation = Series.Serie.tvdb.get_episode_translation(self.tvdb_info["id"], lang)
+
+            if "name" in translation:
+                return translation["name"]
+
+        return None
+
+    def getTranslateDesc(self, lang="eng"):
+
+        if lang in self.tvdb_info["overviewTranslations"]:
+            translation = Series.Serie.tvdb.get_episode_translation(self.tvdb_info["id"], lang)
+
+            if "overview" in translation:
+                return translation["overview"]
+
+        return None
+
+    def getDiscordEmbeded(self, custom_url=None, custom_footer=None, file_size=None):
+
+        serie_title   = self.serie.getTranslateName("fra")
+        if serie_title == None:
+            serie_title  = self.serie.name
+
+        episode_title = self.getTranslateName("fra")
+        if episode_title == None:
+            episode_title  = self.tvdb_info["name"]
+
+        episode_overview = self.getTranslateDesc("fra")
+        if episode_overview == None:
+            episode_overview = self.tvdb_info["overview"]
+
+        embed = discord_webhook.DiscordEmbed(title="{}\n{}".format(serie_title, episode_title), description=episode_overview)
+
+        if "image" in self.tvdb_info:
+            embed.set_image(url=self.tvdb_info["image"])
+        elif "image" in self.serie.tvdb_info:
+            embed.set_image(url=self.serie.tvdb_info["image"])
+
+        if custom_footer:
+            embed.set_footer(text=custom_footer)
+        else:
+            embed.set_footer(text=self.getFullPath())
+
+        if custom_url:
+            embed.set_url(url=custom_url)
+        else:
+            slug = self.serie.tvdb_info["slug"]
+            episode_id = self.tvdb_info["id"]
+            embed.set_url(url=f"https://thetvdb.com/series/{slug}/episodes/{episode_id}")
+
+        embed.add_embed_field(name='Saison', value="{}".format(self.season))
+        embed.add_embed_field(name='Épisode', value="{}".format(self.episode))
+        if file_size:
+            embed.add_embed_field(name='Taille', value="{}".format(file_size))
+
+        return embed

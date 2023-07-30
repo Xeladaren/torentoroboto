@@ -10,8 +10,8 @@ discord_webhook_url = None
 
 def sendNotif(content, embed=None, always_print=False):
     if verbose or always_print:
-        return
         sendDiscordNotif(content, embed=embed)
+        pass
 
 def sendDiscordNotif(content, embed=None, retryCount=10):
 

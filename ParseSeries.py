@@ -29,23 +29,19 @@ class ParseSeries:
         self.jellyfin_api    = None
         self.jellyfin_url    = None
 
-        self._tvdb               = None
         self._added_file_count   = 0
         self._updated_serie_list = []
 
-    def initTvDB(self, api_key, acount_pin):
-        self._tvdb = tvdb_v4_official.TVDB(api_key, acount_pin)
-
-    def _sendNotifDone(self, file_source, file_dest, skiped=False):
+    def _sendNotifDone(self, serie_episode, skiped=False):
 
         if skiped:
-            notif_msg = "**Fichier parcer avec succes** (skiped)\n\tSource = `{}`\n\tDestination = `{}`"
+            notif_msg = "**Nouvel épisode ajouté** (skip)"
         else:
-            notif_msg = "**Fichier parcer avec succes**\n\tSource = `{}`\n\tDestination = `{}`"
+            notif_msg = "**Nouvel épisode ajouté**"
 
-        notif_msg = notif_msg.format(os.path.basename(file_source), file_dest)
+        embed = serie_episode.getDiscordEmbeded()
 
-        Notifs.sendNotif(notif_msg, always_print=True)
+        Notifs.sendNotif(notif_msg, embed=embed, always_print=True)
 
     def _sendNotifStart(self):
         Notifs.sendNotif("**Start parse new file**")
@@ -157,6 +153,7 @@ class ParseSeries:
         outputExt  = os.path.splitext(file)[1]
         outputFile = serie_episode.getFullPath(file_extension=outputExt)
         outputPath = os.path.join(self.output_dir, outputFile)
+        outputDir = os.path.dirname(outputPath)
 
         if self.file_action == "none":
             Print.Custom("OUTPUT", "Do nothing: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t")
@@ -165,7 +162,7 @@ class ParseSeries:
             if os.path.isfile(outputPath):
                 Print.Custom("OUTPUT", "File exist, skip: {}".format(outputPath), title_color=Print.COLOR_CYAN, start="\t")
                 self._writeLogFile("Done", file)
-                self._sendNotifDone(file, outputPath, skiped=True)
+                self._sendNotifDone(serie_episode, skiped=True)
 
                 return
             else:
@@ -188,36 +185,11 @@ class ParseSeries:
                     self._transfertFile(file, outputPath, doMove=True)
 
                 self._writeLogFile("Done", file)
-                self._sendNotifDone(file, outputPath)
+                self._sendNotifDone(serie_episode)
 
         else:
             Print.Error("Invalid Action {}".format(self.file_action))
             quit(1)
-
-    def _getTVDBInfoSerie(self, name, year=None):
-
-        tag_list = ["\\bus\\b", "\\bmulti\\b", "\\bvff\\b", "\\b\d+p\\b"]
-
-        if year != None:
-            resultList = self._tvdb.search(name, type="series", year=year)
-        else:
-            resultList = self._tvdb.search(name, type="series")
-
-        if len(resultList) > 0:
-            result = resultList[0]
-            Print.Custom("TvDB", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(result["id"], result["slug"], result["name"], result["slug"]), title_color=Print.COLOR_GREEN, always_print=True, start="\t")
-            return (result["slug"], result["tvdb_id"])
-        else:
-            Print.Custom("TvDB", "Serie not found: {}".format(name), title_color=Print.COLOR_RED, start="\t", always_print=True)
-            if year:
-                return self._getTVDBInfoSerie(name)
-
-            for tag in tag_list:
-                if re.search(tag, name, flags=re.I):
-                    name = re.sub(tag, "", name, flags=re.I)
-                    return self._getTVDBInfoSerie(name)
-
-            return (None, None)
 
     def _parseSerieName(self, fileName):
         basename = os.path.basename(fileName)
@@ -228,10 +200,10 @@ class ParseSeries:
             Print.Custom(f"MATCH", "File match: Serie '{serieEpisode}'", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
 
 
-            self._doActionOnFile(fileName, serieNameOutFile, season, episode)
+            self._doActionOnFile(fileName, serieEpisode)
             self._added_file_count += 1
-            if not serieId in self._updated_serie_list:
-                self._updated_serie_list += [serieId]
+            if not serieEpisode.serie.id in self._updated_serie_list:
+                self._updated_serie_list += [serieEpisode.serie.id]
         else:
             Print.Custom("MATCH", "File not match: {}".format(basename), title_color=Print.COLOR_RED, start="\t")
             self._writeLogFile("File not match", fileName)
@@ -268,7 +240,7 @@ class ParseSeries:
 
                 for serie in self._updated_serie_list:
                     Print.Custom("JELLYFIN", "Update Jellyfin serie: {}".format(serie), title_color=Print.COLOR_GREEN, always_print=True)
-                    jellyfin_client.library.post_updated_series(tvdb_id=serie)
+                    #jellyfin_client.library.post_updated_series(tvdb_id=serie)
 
             except Exception as ex:
                 Print.Error("Fail to update jellyfin series : {}".format(ex))

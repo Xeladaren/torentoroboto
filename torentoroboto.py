@@ -20,8 +20,8 @@ def startOneRun():
 
     # Find new files
 
-#    torrentAdd.readFeeds()
-#    torrentAdd.waitDownloadTorrents()
+    torrentAdd.readFeeds()
+    torrentAdd.waitDownloadTorrents()
 
     # Parce download serie dir.
 
@@ -50,9 +50,11 @@ def setConfigs():
 
     if "discord" in config and "WebhookURL" in config["discord"]:
         torrentAdd.discord_webhook = config["discord"]["WebhookURL"]
+        parseSeries.discord_webhook = config["discord"]["WebhookURL"]
 
     if "series" in config and "OutputDir" in config["series"]:
         torrentAdd.series_dir      = config["series"]["OutputDir"]
+        parseSeries.output_dir      = config["series"]["OutputDir"]
 
     if "transmissiom" in config and "Host" in config["transmissiom"]:
         if "User" in config["transmissiom"] and "Pass" in config["transmissiom"] :
@@ -60,13 +62,7 @@ def setConfigs():
 
     if "tvdb" in config and "EnableSearch" in config["tvdb"] and config["tvdb"]["EnableSearch"] == "yes" :
         if "ApiKey" in config["tvdb"] and "ApiPIN" in config["tvdb"]:
-                torrentAdd.initTvDB(config["tvdb"]["ApiKey"], config["tvdb"]["ApiPIN"])
                 Series.Serie.initTvDB(config["tvdb"]["ApiKey"], config["tvdb"]["ApiPIN"])
-
-    # Set config for ParseSeries
-
-    if "discord" in config and "WebhookURL" in config["discord"]:
-        parseSeries.discord_webhook = config["discord"]["WebhookURL"]
 
     if "jellyfin" in config and "APIKey" in config["jellyfin"]:
         parseSeries.jellyfin_api = config["jellyfin"]["APIKey"]
@@ -83,15 +79,8 @@ def setConfigs():
     if "series" in config and "SearchDir" in config["series"]:
         parseSeries.scan_dir        = config["series"]["SearchDir"]
 
-    if "series" in config and "OutputDir" in config["series"]:
-        parseSeries.output_dir      = config["series"]["OutputDir"]
-
     if "series" in config and "Action" in config["series"]:
         parseSeries.file_action     = config["series"]["Action"]
-
-    if "tvdb" in config and "EnableSearch" in config["tvdb"] and config["tvdb"]["EnableSearch"] == "yes" :
-        if "ApiKey" in config["tvdb"] and "ApiPIN" in config["tvdb"]:
-                parseSeries.initTvDB(config["tvdb"]["ApiKey"], config["tvdb"]["ApiPIN"])
 
 if __name__ == '__main__':
 

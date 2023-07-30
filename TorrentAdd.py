@@ -13,6 +13,8 @@ import string
 
 import Notifs
 import Print
+import Series
+import SeriesEpisodes
 
 class TorrentAdd:
 
@@ -24,94 +26,25 @@ class TorrentAdd:
         self.trans_dl_dir    = None
         self.log_rss         = None
 
-        self._tvdb = None
         self._trans_client = None
-        self._serieList = None
+        self._serieList = {}
         self._addedTorrentList = []
-
-    def initTvDB(self, api_key, acount_pin):
-        self._tvdb = tvdb_v4_official.TVDB(api_key, acount_pin)
 
     def initTransmission(self, host, username, password, port=9091):
         self._trans_client = transmission_rpc.Client(host=host, port=port, username=username, password=password)
 
-    def _getTVDBInfoSerie(self, name, year=None):
+    def __updateSeriesList(self):
 
-        if year != None:
-            resultList = self._tvdb.search(name, type="series", year=year)
-        else:
-            resultList = self._tvdb.search(name, type="series")
+        Print.Custom("Series", f"Update Episodes on medias dir", title_color=Print.COLOR_GREEN, always_print=True)
+        for serie_dir in os.listdir(self.series_dir):
 
-        if len(resultList) > 0:
-            result = resultList[0]
-            Print.Custom("TvDB", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(result["id"], result["slug"], result["name"], result["slug"]), title_color=Print.COLOR_GREEN, start="\t")
-            return (result["slug"], result)
-        else:
-            Print.Custom("TvDB", "Serie not found: '{}'".format(name), title_color=Print.COLOR_RED, start="\t")
-            if year:
-                return self._getTVDBInfoSerie(name)
-            elif "US" in name:
-                return self._getTVDBInfoSerie(name.replace("US", ""))
-            return None
+            serieMatch = re.search(r"\[tvdbid-(?P<serie_id>\d+)\]", serie_dir)
+            if serieMatch:
+                serie = Series.Serie.findSerieById(serieMatch["serie_id"])
 
-    def _getTVDBInfoEpisode(self, serie_id, season, episode):
-        episodeList = self._tvdb.get_series_episodes(serie_id)
+                if not serie in self._serieList:
+                    self._serieList[serie] = []
 
-        episode_tvdb = None
-        episode_fra  = None
-
-        for item in episodeList["episodes"]:
-            if item["seasonNumber"] == season and item["number"] == episode:
-
-                episode_tvdb = item
-
-                if "fra" in item["nameTranslations"] or "fra" in item["overviewTranslations"] :
-                    episode_fra = self._tvdb.get_episode_translation(item["id"], "fra")
-
-                return (episode_tvdb, episode_fra)
-
-    def _parseSerieName(self, torrent_name, url):
-
-        regexList = [
-            r"^(?P<name>.*)[Ss](?P<season>\d+)[Ee](?P<episode>\d+)"
-        ]
-        matchSerie = None
-
-        for regex in regexList:
-            matchSerie = re.match(regex, torrent_name)
-            if matchSerie != None:
-                break
-
-        if matchSerie != None:
-            name = matchSerie["name"]
-            season = int(matchSerie["season"])
-            episode = int(matchSerie["episode"])
-
-            matchYear = re.match(r"(?P<name>.*)\W(?P<year>(19\d{2})|(20\d{2}))", name)
-            if matchYear != None:
-                name = matchYear["name"]
-                year = matchYear["year"]
-            else:
-                year = None
-
-            nameFormated = re.sub("[\W_]*$", "", name)
-            nameFormated = re.sub("\W+", " ", nameFormated)
-
-            Print.Custom("MATCH", "File match: Serie '{}' Year {} Season {} Episode {}".format(nameFormated, year, season, episode), title_color=Print.COLOR_GREEN)
-#           Print.Custom("LINK", "{}".format(url), title_color=Print.COLOR_GREEN, start="\t")
-
-            result = self._getTVDBInfoSerie(nameFormated, year)
-            if result:
-                return (result[0], season, episode, result[1])
-        return None
-
-    def _getSeriesList(self):
-        if self._serieList == None and os.path.isdir(self.series_dir):
-
-            self._serieList = {}
-            for serie_dir in os.listdir(self.series_dir):
-
-                self._serieList[serie_dir] = []
                 serie_dir_path = os.path.join(self.series_dir, serie_dir)
 
                 for season_dir in os.listdir(serie_dir_path):
@@ -120,22 +53,25 @@ class TorrentAdd:
 
                     for episode_file in os.listdir(season_dir_path):
 
-                        matchSerie = re.match(r"^.*S(?P<season>\d+)E(?P<episode>\d+)", episode_file)
-                        self._serieList[serie_dir] += [(int(matchSerie["season"]), int(matchSerie["episode"]))]
-            quit(1)
+                        matchEpisode = re.search(r"S(?P<season>\d+)E(?P<episode>\d+)", episode_file)
+                        if matchEpisode:
+                            episode_serie = SeriesEpisodes.SerieEpisode.findEpisodeBySerie(serie, int(matchEpisode["season"]), int(matchEpisode["episode"]))
+                            if episode_serie and not episode_serie in self._serieList[serie]:
+                                Print.Custom("Series", f"Add : {episode_serie}", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
+                                self._serieList[serie] += [episode_serie]
+
+        Print.Custom("Series", f"Update Episodes on medias dir end", title_color=Print.COLOR_GREEN, always_print=True)
 
 
 
-    def _checkIfNeeded(self, serie_name, season, episode):
+    def _checkIfNeeded(self, episode_serie):
 
-        self._getSeriesList()
+        self.__updateSeriesList()
 
-        if os.path.isdir(self.series_dir):
-            dirList = os.listdir(self.series_dir)
-            if serie_name in self._serieList:
-                if not (season, episode) in self._serieList[serie_name]:
-                    Print.Custom("NEED", "Needed Episode {} {}".format(serie_name, (season, episode)), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
-                    return True
+        if episode_serie.serie in self._serieList:
+            if not episode_serie in self._serieList[episode_serie.serie]:
+                Print.Custom("NEED", f"Needed Episode {episode_serie}", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
+                return True
         return False
 
     def _getBestTorrent(self, first, second):
@@ -166,16 +102,16 @@ class TorrentAdd:
 
         for episode in needList:
 
-            while len(needList[episode]["file-list"]) > 1:
+            while len(needList[episode]) > 1:
 
-                newFileList = [self._getBestTorrent(needList[episode]["file-list"][0], needList[episode]["file-list"][1])]
+                newFileList = [self._getBestTorrent(needList[episode][0], needList[episode][1])]
 
-                if len(needList[episode]["file-list"]) > 2:
-                    newFileList += needList[episode]["file-list"][2:]
+                if len(needList[episode]) > 2:
+                    newFileList += needList[episode][2:]
 
-                needList[episode]["file-list"] = newFileList
+                needList[episode] = newFileList
 
-            finalNeeded[episode] = {"TvDB-serie": needList[episode]["TvDB-serie"], "torrent-file": needList[episode]["file-list"][0]}
+            finalNeeded[episode] = needList[episode][0]
 
         return finalNeeded
 
@@ -190,7 +126,8 @@ class TorrentAdd:
                 else:
                     self._addedTorrentList += [self._trans_client.add_torrent(torrent_link)]
             except:
-                Print.Custom("TORRENT", "Download start faild : {}".format(torrent_file["title"]), title_color=Print.COLOR_RED, always_print=True)
+                Print.Custom("TORRENT", f"Download start faild : {torrent_link}", title_color=Print.COLOR_RED, always_print=True)
+                Notifs.sendNotif(f"**Download start faild** : {torrent_link}", always_print=True)
                 return False
         else:
             Print.Warning("Not transmissiom connected")
@@ -198,44 +135,20 @@ class TorrentAdd:
         Print.Custom("TORRENT", "Download start : {}".format(torrent_file["title"]), title_color=Print.COLOR_GREEN, always_print=True)
         return True
 
-    def _sendAddedNotif(self, episode, tvdb_serie, torrent_file=None):
-
-        tvdb_episode = self._getTVDBInfoEpisode(int(tvdb_serie["tvdb_id"]), episode[1], episode[2])
-
-        serie_title   = tvdb_serie["name"]
-        if "fra" in tvdb_serie["translations"]:
-            serie_title = tvdb_serie["translations"]["fra"]
-
-        episode_title = tvdb_episode[0]["name"]
-        if tvdb_episode[1] and "name" in tvdb_episode[1]:
-            episode_title = tvdb_episode[1]["name"]
-
-        episode_overview = tvdb_episode[0]["overview"]
-        if tvdb_episode[1] and "overview" in tvdb_episode[1]:
-            episode_overview = tvdb_episode[1]["overview"]
-
-        image = tvdb_serie["image_url"]
-        if "image" in tvdb_episode[0] and tvdb_episode[0]["image"]:
-            image = tvdb_episode[0]["image"]
+    def _sendAddedNotif(self, episode, torrent_file=None):
 
         file_size = int(torrent_file["links"][1]["length"])
         file_size = human_readable.file_size(file_size)
 
-        embed = discord_webhook.DiscordEmbed(title="{}\n{}".format(serie_title, episode_title), description=episode_overview)
-        embed.set_image(url=image)
-
-#            if tvdb_serie["thumbnail"]:
-#                embed.set_thumbnail(url=tvdb_serie["thumbnail"])
-
+        footer = None
         if torrent_file:
-            embed.set_footer(text=torrent_file["title"])
+            footer = torrent_file["title"]
 
+        url = None
         if torrent_file:
-            embed.set_url(url=torrent_file["link"])
+            url = torrent_file["link"]
 
-        embed.add_embed_field(name='Saison', value="{}".format(episode[1]))
-        embed.add_embed_field(name='Épisode', value="{}".format(episode[2]))
-        embed.add_embed_field(name='Taille', value="{}".format(file_size))
+        embed = episode.getDiscordEmbeded(custom_url=url, custom_footer=footer, file_size=file_size)
 
         Notifs.sendNotif("**Nouveau Torrent ajouté :**", embed=embed, always_print=True)
 
@@ -277,7 +190,7 @@ class TorrentAdd:
     def waitDownloadTorrents(self):
 
         Print.Custom("TORRENT", "Wait Download Torrents", title_color=Print.COLOR_GREEN, always_print=True)
-        self._getSeriesList()
+        self.__updateSeriesList()
 
         while len(self._addedTorrentList) > 0:
             for torrent in self._addedTorrentList:
@@ -316,9 +229,15 @@ class TorrentAdd:
 
         if self.rss_url:
 
-            self._serieList = None
-
             feeds = feedparser.parse(self.rss_url)
+
+            import json
+
+            if "status" in feeds and feeds["status"] != 200:
+                Print.Error(f"Error to get RSS-feed : {feeds['status']}")
+                print(feeds)
+                Notifs.sendNotif(f"**Error to read RSS**: {feeds['status']}", always_print=True)
+
             needsFiles = {}
 
             Print.Custom("FEEDS", "Start Read Feeds", title_color=Print.COLOR_GREEN, always_print=True)
@@ -326,24 +245,27 @@ class TorrentAdd:
 
             for entrie in feeds["entries"]:
                 if not self._isReededRSSPost(entrie):
+
                     Print.Custom("RSS", "Unreaded post : {}".format(entrie["title"]), title_color=Print.COLOR_GREEN, always_print=True)
                     Notifs.sendNotif("**Unreaded post**: {}".format(entrie["title"]))
                     self._addReededRSSPost(entrie)
-                    result = self._parseSerieName(entrie["title"], entrie["id"])
-                    if result and self._checkIfNeeded(result[0], result[1], result[2]):
 
-                        if result[0:3] in needsFiles:
-                            needsFiles[result[0:3]]["file-list"] += [entrie]
+                    serie_episode = SeriesEpisodes.SerieEpisode.findEpisodeByFileName(entrie["title"])
+
+                    if serie_episode and self._checkIfNeeded(serie_episode):
+
+                        if serie_episode in needsFiles:
+                            needsFiles[serie_episode] += [entrie]
                         else:
-                            needsFiles[result[0:3]] = {"TvDB-serie": result[3], "file-list": [entrie]}
+                            needsFiles[serie_episode] = [entrie]
                 else:
                     Print.Custom("RSS", "Readed post, skip : {}".format(entrie["title"]), title_color=Print.COLOR_BLUE)
 
             needsFiles = self._cleanNeeded(needsFiles)
 
-            for file in needsFiles:
-                if self._startTorrent(needsFiles[file]["torrent-file"]):
-                    self._sendAddedNotif(file, needsFiles[file]["TvDB-serie"], needsFiles[file]["torrent-file"])
+            for episode in needsFiles:
+                if self._startTorrent(needsFiles[episode]):
+                    self._sendAddedNotif(file, episode, needsFiles[episode])
 
             Print.Custom("FEEDS", "End Read Feeds: {} new files added".format(len(needsFiles)), title_color=Print.COLOR_GREEN, always_print=True)
             Notifs.sendNotif("**End Read Feeds**: {} new files added".format(len(needsFiles)))

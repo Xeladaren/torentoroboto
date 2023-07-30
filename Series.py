@@ -6,6 +6,12 @@ import re
 
 import Print
 
+if __name__ == '__main__':
+    Print.Error("this file can't be run alone.")
+    quit(1)
+
+tag_list = ["\\bus\\b", "\\bmulti\\b", "\\bvff\\b", "\\b\d+p\\b"]
+
 class Serie:
 
     seriesList = []
@@ -40,9 +46,12 @@ class Serie:
             else:
                 Print.Custom("Serie", "Serie not found: '{}'".format(name), title_color=Print.COLOR_RED, start="\t")
                 if year:
-                    return self._getTVDBInfoSerie(name)
-                elif "US" in name:
-                    return self._getTVDBInfoSerie(name.replace("US", ""))
+                    return Serie.findSerieByName(name)
+
+                for tag in tag_list:
+                    if re.search(tag, name, flags=re.I):
+                        name = re.sub(tag, "", name, flags=re.I)
+                        return Serie.findSerieByName(name)
 
             for serie in Serie.seriesList:
                 if serie == int(serieFountTvdb["tvdb_id"]):
@@ -118,6 +127,9 @@ class Serie:
 
     def __format__(self, formatStr):
         return self.name
+
+    def __hash__(self):
+        return hash(self.id)
 
     def __normaliseAndCheck(self, name):
 
