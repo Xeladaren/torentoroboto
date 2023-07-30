@@ -73,7 +73,7 @@ class TorrentAdd:
     def _parseSerieName(self, torrent_name, url):
 
         regexList = [
-            "^(?P<name>.*)[Ss](?P<season>\d+)[Ee](?P<episode>\d+)"
+            r"^(?P<name>.*)[Ss](?P<season>\d+)[Ee](?P<episode>\d+)"
         ]
         matchSerie = None
 
@@ -87,7 +87,7 @@ class TorrentAdd:
             season = int(matchSerie["season"])
             episode = int(matchSerie["episode"])
 
-            matchYear = re.match("(?P<name>.*)\W(?P<year>(19\d{2})|(20\d{2}))", name)
+            matchYear = re.match(r"(?P<name>.*)\W(?P<year>(19\d{2})|(20\d{2}))", name)
             if matchYear != None:
                 name = matchYear["name"]
                 year = matchYear["year"]
@@ -120,7 +120,7 @@ class TorrentAdd:
 
                     for episode_file in os.listdir(season_dir_path):
 
-                        matchSerie = re.match("^.*S(?P<season>\d+)E(?P<episode>\d+)", episode_file)
+                        matchSerie = re.match(r"^.*S(?P<season>\d+)E(?P<episode>\d+)", episode_file)
                         self._serieList[serie_dir] += [(int(matchSerie["season"]), int(matchSerie["episode"]))]
             quit(1)
 
@@ -239,9 +239,11 @@ class TorrentAdd:
 
         Notifs.sendNotif("**Nouveau Torrent ajouté :**", embed=embed, always_print=True)
 
-    def _sendEndDownloadNotif(self, torrent_name, is_stoped=False):
+    def _sendEndDownloadNotif(self, torrent_name, is_stoped=False, is_error=False):
 
-        if is_stoped:
+        if is_error:
+            Notifs.sendNotif("**Erreur sur le torrent**:\n\t`{}`".format(torrent_name), always_print=True)
+        elif is_stoped:
             Notifs.sendNotif("**Torrent stoppé**:\n\t`{}`".format(torrent_name), always_print=True)
         else:
             Notifs.sendNotif("**Torrent téléchargé**:\n\t`{}`".format(torrent_name), always_print=True)
@@ -277,29 +279,37 @@ class TorrentAdd:
         Print.Custom("TORRENT", "Wait Download Torrents", title_color=Print.COLOR_GREEN, always_print=True)
         self._getSeriesList()
 
-        for torrent in self._addedTorrentList:
-            percent_done = 0
-            is_stoped = False
+        while len(self._addedTorrentList) > 0:
+            for torrent in self._addedTorrentList:
+                percent_done = 0
+                is_stoped = False
 
-            while percent_done < 1 and not is_stoped:
-                torrent_update = self._trans_client.get_torrent(torrent.hashString)
+                try:
+                    torrent_update = self._trans_client.get_torrent(torrent.hashString)
+                except:
+                    Print.Custom("TORRENT", "Download error : {}".format(torrent.name), title_color=Print.COLOR_RED, always_print=True)
+                    self._sendEndDownloadNotif(torrent.name, is_stoped=False, is_error=True)
+                    self._addedTorrentList.remove(torrent)
+                    break
+
                 try:
                     Print.Custom("TORRENT", "Downloading : {} {} {} %".format(torrent_update.name, torrent_update.status, int(torrent_update.percent_done * 100)), title_color=Print.COLOR_GREEN)
                     percent_done = torrent_update.percent_done
                     is_stoped = torrent_update.status == "stopped"
-                    if percent_done == 1 or is_stoped:
-                        break
+
                 except:
-                    Print.Custom("TORRENT", "Downloading : {}".format(torrent_update.name), title_color=Print.COLOR_GREEN)
+                    Print.Custom("TORRENT", "Downloading : {}".format(torrent.name), title_color=Print.COLOR_RED)
 
-                time.sleep(1)
-            if percent_done == 1:
-                Print.Custom("TORRENT", "Download end : {}".format(torrent_update.name), title_color=Print.COLOR_GREEN, always_print=True)
-                self._addedTorrentList.remove(torrent)
-            else:
-                Print.Custom("TORRENT", "Download stoped : {}".format(torrent_update.name), title_color=Print.COLOR_YELLOW, always_print=True)
-            self._sendEndDownloadNotif(torrent_update.name, is_stoped=is_stoped)
+                if percent_done == 1:
+                    Print.Custom("TORRENT", "Download end : {}".format(torrent.name), title_color=Print.COLOR_GREEN, always_print=True)
+                    self._sendEndDownloadNotif(torrent.name, is_stoped=False, is_error=False)
+                    self._addedTorrentList.remove(torrent)
+                elif is_stoped == True:
+                    Print.Custom("TORRENT", "Download stoped : {}".format(torrent.name), title_color=Print.COLOR_YELLOW, always_print=True)
+                    self._sendEndDownloadNotif(torrent.name, is_stoped=True, is_error=False)
+                    self._addedTorrentList.remove(torrent)
 
+            time.sleep(1)
         Print.Custom("TORRENT", "Stop Wait Download Torrents", title_color=Print.COLOR_GREEN, always_print=True)
 
     def readFeeds(self):
