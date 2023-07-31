@@ -35,7 +35,10 @@ class TorrentAdd:
     def initTransmission(self, host, username, password, port=9091):
         self._trans_client = transmission_rpc.Client(host=host, port=port, username=username, password=password)
 
-    def __updateSeriesList(self):
+    def __updateSeriesList(self, force=False):
+
+        if len(self._serieList) > 0 and not force:
+            return
 
         Print.Custom("Series", f"Update Episodes on medias dir", title_color=Print.COLOR_GREEN, always_print=True)
         for serie_dir in os.listdir(self.series_dir):
@@ -59,7 +62,7 @@ class TorrentAdd:
                         if matchEpisode:
                             episode_serie = SeriesEpisodes.SerieEpisode.findEpisodeBySerie(serie, int(matchEpisode["season"]), int(matchEpisode["episode"]))
                             if episode_serie and not episode_serie in self._serieList[serie]:
-                                Print.Custom("Series", f"Add : {episode_serie}", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
+                                Print.Custom("Series", f"Add : {episode_serie}", title_color=Print.COLOR_GREEN, start="\t", always_print=False)
                                 self._serieList[serie] += [episode_serie]
 
         Print.Custom("Series", f"Update Episodes on medias dir end", title_color=Print.COLOR_GREEN, always_print=True)
@@ -247,6 +250,7 @@ class TorrentAdd:
                     Notifs.sendNotif(f":green_circle: **get RSS feed OK**", always_print=True)
                     self.__last_rss_ret = 200
 
+            self.__updateSeriesList(force=True)
             needsFiles = {}
 
             Print.Custom("FEEDS", "Start Read Feeds", title_color=Print.COLOR_GREEN, always_print=True)

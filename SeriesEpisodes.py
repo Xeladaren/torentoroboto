@@ -81,9 +81,8 @@ class SerieEpisode:
         self.serie      = serie
         self.season     = int(season)
         self.episode    = int(episode)
-        self.tvdb_info  = None
 
-        self.__getEpisodeInfo()
+        self.__tvdb_info  = None
 
     def __eq__(self, other):
 
@@ -106,13 +105,18 @@ class SerieEpisode:
 
     def __getEpisodeInfo(self):
 
-        episodeList = Series.Serie.tvdb.get_series_episodes(self.serie.id)
+        if self.__tvdb_info == None:
+            episodeList = Series.Serie.tvdb.get_series_episodes(self.serie.id)
 
-        for item in episodeList["episodes"]:
-            if item["seasonNumber"] == self.season and item["number"] == self.episode:
+            for item in episodeList["episodes"]:
+                if item["seasonNumber"] == self.season and item["number"] == self.episode:
 
-                self.tvdb_info = item
-                return
+                    self.__tvdb_info = item
+                    return
+
+    def getTvDBInfo():
+        self,__getEpisodeInfo()
+        return self.__tvdb_info
 
     def getFileName(self, simple=True, file_extension=""):
 
@@ -141,8 +145,8 @@ class SerieEpisode:
 
     def getTranslateName(self, lang="eng"):
 
-        if lang in self.tvdb_info["nameTranslations"]:
-            translation = Series.Serie.tvdb.get_episode_translation(self.tvdb_info["id"], lang)
+        if lang in self.getTvDBInfo()["nameTranslations"]:
+            translation = Series.Serie.tvdb.get_episode_translation(self.getTvDBInfo()["id"], lang)
 
             if "name" in translation:
                 return translation["name"]
@@ -151,8 +155,8 @@ class SerieEpisode:
 
     def getTranslateDesc(self, lang="eng"):
 
-        if lang in self.tvdb_info["overviewTranslations"]:
-            translation = Series.Serie.tvdb.get_episode_translation(self.tvdb_info["id"], lang)
+        if lang in self.getTvDBInfo()["overviewTranslations"]:
+            translation = Series.Serie.tvdb.get_episode_translation(self.getTvDBInfo()["id"], lang)
 
             if "overview" in translation:
                 return translation["overview"]
@@ -167,18 +171,18 @@ class SerieEpisode:
 
         episode_title = self.getTranslateName("fra")
         if episode_title == None:
-            episode_title  = self.tvdb_info["name"]
+            episode_title  = self.getTvDBInfo()["name"]
 
         episode_overview = self.getTranslateDesc("fra")
         if episode_overview == None:
-            episode_overview = self.tvdb_info["overview"]
+            episode_overview = self.getTvDBInfo()["overview"]
 
         embed = discord_webhook.DiscordEmbed(title="{}\n{}".format(serie_title, episode_title), description=episode_overview)
 
-        if "image" in self.tvdb_info:
-            embed.set_image(url=self.tvdb_info["image"])
-        elif "image" in self.serie.tvdb_info:
-            embed.set_image(url=self.serie.tvdb_info["image"])
+        if "image" in self.getTvDBInfo():
+            embed.set_image(url=self.getTvDBInfo()["image"])
+        elif "image" in self.serie.getTvDBInfo():
+            embed.set_image(url=self.serie.getTvDBInfo()["image"])
 
         if custom_footer:
             embed.set_footer(text=custom_footer)
@@ -188,8 +192,8 @@ class SerieEpisode:
         if custom_url:
             embed.set_url(url=custom_url)
         else:
-            slug = self.serie.tvdb_info["slug"]
-            episode_id = self.tvdb_info["id"]
+            slug = self.serie.getTvDBInfo()["slug"]
+            episode_id = self.getTvDBInfo()["id"]
             embed.set_url(url=f"https://thetvdb.com/series/{slug}/episodes/{episode_id}")
 
         embed.add_embed_field(name='Saison', value="{}".format(self.season))
