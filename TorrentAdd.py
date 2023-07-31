@@ -19,16 +19,18 @@ import SeriesEpisodes
 class TorrentAdd:
 
     def __init__(self):
-        self.rss_url         = None
-        self.discord_webhook = None
-        self.series_dir      = None
-        self.series_tags     = None
-        self.trans_dl_dir    = None
-        self.log_rss         = None
+        self.rss_url           = None
+        self.discord_webhook   = None
+        self.series_dir        = None
+        self.series_tags       = None
+        self.trans_dl_dir      = None
+        self.log_rss           = None
 
-        self._trans_client = None
-        self._serieList = {}
+        self._trans_client     = None
+        self._serieList        = {}
         self._addedTorrentList = []
+
+        self.__last_rss_ret    = None
 
     def initTransmission(self, host, username, password, port=9091):
         self._trans_client = transmission_rpc.Client(host=host, port=port, username=username, password=password)
@@ -236,7 +238,14 @@ class TorrentAdd:
             if "status" in feeds and feeds["status"] != 200:
                 Print.Error(f"Error to get RSS-feed : {feeds['status']}")
                 print(feeds)
-                Notifs.sendNotif(f"**Error to read RSS**: {feeds['status']}", always_print=True)
+                if self.__last_rss_ret == None or self.__last_rss_ret != feeds["status"]:
+                    Notifs.sendNotif(f":red_circle: **Error to get RSS feed**: {feeds['status']}", always_print=True)
+                    self.__last_rss_ret = feeds["status"]
+                return
+            else:
+                if self.__last_rss_ret == None or self.__last_rss_ret != 200:
+                    Notifs.sendNotif(f":green_circle: **get RSS feed OK**", always_print=True)
+                    self.__last_rss_ret = 200
 
             needsFiles = {}
 
