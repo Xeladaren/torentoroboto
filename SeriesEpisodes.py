@@ -115,7 +115,7 @@ class SerieEpisode:
                     return
 
     def getTvDBInfo(self):
-        self,__getEpisodeInfo()
+        self.__getEpisodeInfo()
         return self.__tvdb_info
 
     def getFileName(self, simple=True, file_extension=""):
