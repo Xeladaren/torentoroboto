@@ -181,8 +181,8 @@ class SerieEpisode:
 
         if "image" in self.getTvDBInfo():
             embed.set_image(url=self.getTvDBInfo()["image"])
-        elif "image" in self.serie.getTvDBInfo():
-            embed.set_image(url=self.serie.getTvDBInfo()["image"])
+        elif "image" in self.serie.tvdb_info:
+            embed.set_image(url=self.serie.tvdb_info["image"])
 
         if custom_footer:
             embed.set_footer(text=custom_footer)
@@ -192,7 +192,7 @@ class SerieEpisode:
         if custom_url:
             embed.set_url(url=custom_url)
         else:
-            slug = self.serie.getTvDBInfo()["slug"]
+            slug = self.serie.tvdb_info["slug"]
             episode_id = self.getTvDBInfo()["id"]
             embed.set_url(url=f"https://thetvdb.com/series/{slug}/episodes/{episode_id}")
 
