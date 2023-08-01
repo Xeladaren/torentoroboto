@@ -278,7 +278,7 @@ class TorrentAdd:
 
             for episode in needsFiles:
                 if self._startTorrent(needsFiles[episode]):
-                    self._sendAddedNotif(file, episode, needsFiles[episode])
+                    self._sendAddedNotif(episode, needsFiles[episode])
 
             Print.Custom("FEEDS", "End Read Feeds: {} new files added".format(len(needsFiles)), title_color=Print.COLOR_GREEN, always_print=True)
             Notifs.sendNotif("**End Read Feeds**: {} new files added".format(len(needsFiles)))

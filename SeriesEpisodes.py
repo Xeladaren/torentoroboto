@@ -114,7 +114,7 @@ class SerieEpisode:
                     self.__tvdb_info = item
                     return
 
-    def getTvDBInfo():
+    def getTvDBInfo(self):
         self,__getEpisodeInfo()
         return self.__tvdb_info
 
