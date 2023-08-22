@@ -53,14 +53,19 @@ class Serie:
                         name = re.sub(tag, "", name, flags=re.I)
                         return Serie.findSerieByName(name)
 
-            for serie in Serie.seriesList:
-                if serie == int(serieFountTvdb["tvdb_id"]):
-                    return serie
+            if serieFountTvdb:
 
-            newSerie = Serie.findSerieById(int(serieFountTvdb["tvdb_id"]))
-            Serie.seriesList.append(newSerie)
+                for serie in Serie.seriesList:
+                    if serie == int(serieFountTvdb["tvdb_id"]):
+                        return serie
 
-            return newSerie
+                newSerie = Serie.findSerieById(int(serieFountTvdb["tvdb_id"]))
+                Serie.seriesList.append(newSerie)
+
+                return newSerie
+            else:
+                Print.Error(f"[Serie] Serie not found {name}")
+                return None
         else:
             Print.Error("[Serie] TVDB not initialised")
             return None
