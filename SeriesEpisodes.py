@@ -98,7 +98,7 @@ class SerieEpisode:
         return f"SerieEpisode(name='{self.serie.name}', season={self.season}, episode={self.episode})"
 
     def __format__(self, formatStr):
-        return self.getFileName()
+        return f"SerieEpisode(name='{self.serie.name}', season={self.season}, episode={self.episode})"
 
     def __hash__(self):
         return hash((self.serie, self.season, self.episode))
@@ -122,11 +122,17 @@ class SerieEpisode:
 
         if simple:
             serie_name = self.serie.getFolderName(no_space=True, add_year=False, add_tvdbid=False)
-            return f"{serie_name}.S{self.season:02}E{self.episode:02}{file_extension}"
+            if serie_name:
+                return f"{serie_name}.S{self.season:02}E{self.episode:02}{file_extension}"
+            else:
+                return None
 
         else:
             serie_name = self.serie.getFolderName(no_space=False, add_year=False, add_tvdbid=False)
-            return f"{serie_name} - Season {self.season:02} Episode {self.episode:02}{file_extension}"
+            if serie_name:
+                return f"{serie_name} - Season {self.season:02} Episode {self.episode:02}{file_extension}"
+            else:
+                return None
 
     def getFullPath(self, simple_serie=False, simple_season=False, simple_episode=True, file_extension=""):
         if simple_serie:
@@ -141,7 +147,10 @@ class SerieEpisode:
 
         episode_file = self.getFileName(simple=simple_episode, file_extension=file_extension)
 
-        return os.path.join(serie_dir, season_dir, episode_file)
+        if serie_dir and episode_file:
+            return os.path.join(serie_dir, season_dir, episode_file)
+        else:
+            return None
 
     def getTranslateName(self, lang="eng"):
 

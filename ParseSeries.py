@@ -152,6 +152,10 @@ class ParseSeries:
 
         outputExt  = os.path.splitext(file)[1]
         outputFile = serie_episode.getFullPath(file_extension=outputExt)
+        if outputFile == None:
+            Print.Error(f"Invalid output file : {serie_episode}")
+            return
+
         outputPath = os.path.join(self.output_dir, outputFile)
         outputDir = os.path.dirname(outputPath)
 

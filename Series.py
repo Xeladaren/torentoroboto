@@ -184,26 +184,29 @@ class Serie:
 
         name_normalized = self.getNormalizedName()
 
-        if add_year:
-            name_normalized = re.sub(r"\s*\(\d{4}\)\s*$", "", name_normalized)
-
-        if no_space:
-
-            name_normalized = re.sub("\s*-\s*", "-", name_normalized)
-            name_normalized = re.sub("\s+", "_", name_normalized)
-            name_normalized = re.sub("(?=\W)[^-]", "", name_normalized)
-
+        if name_normalized:
             if add_year:
-                name_normalized = "{}.{}".format(name_normalized, self.tvdb_info["year"])
+                name_normalized = re.sub(r"\s*\(\d{4}\)\s*$", "", name_normalized)
 
-            if add_tvdbid:
-                name_normalized = "{}.tvdbid-{}".format(name_normalized, self.id)
+            if no_space:
 
+                name_normalized = re.sub("\s*-\s*", "-", name_normalized)
+                name_normalized = re.sub("\s+", "_", name_normalized)
+                name_normalized = re.sub("(?=\W)[^-]", "", name_normalized)
+
+                if add_year:
+                    name_normalized = "{}.{}".format(name_normalized, self.tvdb_info["year"])
+
+                if add_tvdbid:
+                    name_normalized = "{}.tvdbid-{}".format(name_normalized, self.id)
+
+            else:
+                if add_year:
+                    name_normalized = "{} ({})".format(name_normalized, self.tvdb_info["year"])
+
+                if add_tvdbid:
+                    name_normalized = "{} [tvdbid-{}]".format(name_normalized, self.id)
+
+            return name_normalized
         else:
-            if add_year:
-                name_normalized = "{} ({})".format(name_normalized, self.tvdb_info["year"])
-
-            if add_tvdbid:
-                name_normalized = "{} [tvdbid-{}]".format(name_normalized, self.id)
-
-        return name_normalized
+            return None
