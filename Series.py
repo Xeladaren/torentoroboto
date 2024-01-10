@@ -101,7 +101,20 @@ class Serie:
 
     def __init__(self, id):
 
-        serieTvdb = Serie.tvdb.get_series(id)
+        retry_count = 5
+
+        while retry_count > 0:
+            try:
+                serieTvdb = Serie.tvdb.get_series(id)
+            except Exception as inst:
+                serieTvdb = None
+                retry_count -= 1;
+
+                Print.Error("[Serie] Fail to get TVDB Series. retry in 1s")
+
+                time.sleep(1)
+            else:
+                break
 
         if serieTvdb:
             self.name      = serieTvdb["name"]
@@ -111,6 +124,7 @@ class Serie:
 
             Serie.seriesList.append(self)
         else:
+            Print.Error("[Serie] Fail to get TVDB Series. destroy object.")
             del self
 
     def __eq__(self, other):
