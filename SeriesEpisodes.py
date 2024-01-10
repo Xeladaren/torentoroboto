@@ -154,21 +154,29 @@ class SerieEpisode:
 
     def getTranslateName(self, lang="eng"):
 
-        if lang in self.getTvDBInfo()["nameTranslations"]:
-            translation = Series.Serie.tvdb.get_episode_translation(self.getTvDBInfo()["id"], lang)
+        tv_info = self.getTvDBInfo()
 
-            if "name" in translation:
-                return translation["name"]
+        if tv_info and "nameTranslations" in tv_info:
+            if lang in tv_info["nameTranslations"]:
+
+                translation = Series.Serie.tvdb.get_episode_translation(tv_info["id"], lang)
+
+                if "name" in translation:
+                    return translation["name"]
 
         return None
 
     def getTranslateDesc(self, lang="eng"):
 
-        if lang in self.getTvDBInfo()["overviewTranslations"]:
-            translation = Series.Serie.tvdb.get_episode_translation(self.getTvDBInfo()["id"], lang)
+        tv_info = self.getTvDBInfo()
 
-            if "overview" in translation:
-                return translation["overview"]
+        if tv_info and "overviewTranslations" in tv_info:
+            if lang in tv_info["overviewTranslations"]:
+
+                translation = Series.Serie.tvdb.get_episode_translation(tv_info["id"], lang)
+
+                if "overview" in translation:
+                    return translation["overview"]
 
         return None
 
