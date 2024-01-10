@@ -182,22 +182,28 @@ class SerieEpisode:
 
     def getDiscordEmbeded(self, custom_url=None, custom_footer=None, file_size=None):
 
+        tvdb_info = self.getTvDBInfo()
+
         serie_title   = self.serie.getTranslateName("fra")
         if serie_title == None:
             serie_title  = self.serie.name
 
         episode_title = self.getTranslateName("fra")
+        if episode_title == None and tvdb_info and "name" in tvdb_info :
+            episode_title  = tvdb_info["name"]
         if episode_title == None:
-            episode_title  = self.getTvDBInfo()["name"]
+            episode_title  = "Unknown"
 
         episode_overview = self.getTranslateDesc("fra")
+        if episode_overview == None and tvdb_info and "overview" in tvdb_info:
+            episode_overview = tvdb_info["overview"]
         if episode_overview == None:
-            episode_overview = self.getTvDBInfo()["overview"]
+            episode_overview  = ""
 
         embed = discord_webhook.DiscordEmbed(title="{}\n{}".format(serie_title, episode_title), description=episode_overview)
 
-        if "image" in self.getTvDBInfo():
-            embed.set_image(url=self.getTvDBInfo()["image"])
+        if tvdb_info and "image" in tvdb_info:
+            embed.set_image(url=tvdb_info["image"])
         elif "image" in self.serie.tvdb_info:
             embed.set_image(url=self.serie.tvdb_info["image"])
 
@@ -210,8 +216,9 @@ class SerieEpisode:
             embed.set_url(url=custom_url)
         else:
             slug = self.serie.tvdb_info["slug"]
-            episode_id = self.getTvDBInfo()["id"]
-            embed.set_url(url=f"https://thetvdb.com/series/{slug}/episodes/{episode_id}")
+            if tvdb_info and "id" in tvdb_info:
+                episode_id = tvdb_info["id"]
+                embed.set_url(url=f"https://thetvdb.com/series/{slug}/episodes/{episode_id}")
 
         embed.add_embed_field(name='Saison', value="{}".format(self.season))
         embed.add_embed_field(name='Épisode', value="{}".format(self.episode))

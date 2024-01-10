@@ -10,6 +10,7 @@ import time
 import human_readable
 import unidecode
 import string
+import json
 
 import Notifs
 import Print
@@ -236,7 +237,6 @@ class TorrentAdd:
 
             feeds = feedparser.parse(self.rss_url)
 
-            import json
 
             if "status" in feeds and feeds["status"] != 200:
                 Print.Error(f"Error to get RSS-feed : {feeds['status']}")

@@ -3,6 +3,9 @@ import tvdb_v4_official
 import unidecode
 import string
 import re
+import math
+import time
+from strsimpy.levenshtein import Levenshtein
 
 import Print
 
@@ -39,7 +42,41 @@ class Serie:
             serieFountTvdb = None
 
             if len(resultList) > 0:
-                result = resultList[0]
+                if len(resultList) > 1:
+                    levenshtein = Levenshtein()
+                    min_distance = math.inf
+                    for tmp_result in resultList:
+                        #print(tmp_result)
+                        distance = levenshtein.distance(name, tmp_result["name"])
+
+                        for serie in Serie.seriesList:
+                            if serie == int(tmp_result["tvdb_id"]):
+                                return serie
+
+                        if min_distance > distance :
+                            result = tmp_result
+                            min_distance = distance
+
+                        if "aliases" in tmp_result:
+                            for aliase in tmp_result["aliases"]:
+                                distance = levenshtein.distance(name, aliase) + 0.1
+
+                                if min_distance > distance :
+                                    result = tmp_result
+                                    min_distance = distance
+                        
+                        if "translations" in tmp_result:
+                            for translation in tmp_result["translations"]:
+                                trans_title = tmp_result['translations'][translation]
+                                distance = levenshtein.distance(name, trans_title) + 0.2
+
+                                if min_distance > distance :
+                                    result = tmp_result
+                                    min_distance = distance
+                            
+                else:
+                    result = resultList[0]
+                
                 Print.Custom("Serie", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(
                     result["id"], result["slug"], result["name"], result["slug"]), title_color=Print.COLOR_GREEN, start="\t")
                 serieFountTvdb = result
@@ -110,7 +147,7 @@ class Serie:
                 serieTvdb = None
                 retry_count -= 1;
 
-                Print.Error("[Serie] Fail to get TVDB Series. retry in 1s")
+                Print.Error(f"[Serie] Fail to get TVDB Series {id}. retry in 1s")
 
                 time.sleep(1)
             else:
@@ -169,13 +206,14 @@ class Serie:
             resultList = Serie.tvdb.search(name_normalized, type="series")
 
             if len(resultList) > 0:
-                if int(resultList[0]["tvdb_id"]) == self.id:
-                    return name_normalized
+                for result in resultList:
+                    if result and "tvdb_id" in result and int(result["tvdb_id"]) == self.id:
+                        return name_normalized
 
         name_normalized = self.tvdb_info["slug"].replace("-", " ")
         name_normalized = string.capwords(name_normalized)
 
-        return None
+        return name_normalized
 
     def getTranslateName(self, lang="eng"):
 

@@ -162,7 +162,7 @@ class ParseSeries:
         if self.file_action == "none":
             Print.Custom("OUTPUT", "Do nothing: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t")
             return
-        elif self.file_action in ["link", "copy", "move"]:
+        elif self.file_action in ["link", "hlink", "copy", "move"]:
             if os.path.isfile(outputPath):
                 Print.Custom("OUTPUT", "File exist, skip: {}".format(outputPath), title_color=Print.COLOR_CYAN, start="\t")
                 self._writeLogFile("Done", file)
@@ -181,6 +181,9 @@ class ParseSeries:
                 if self.file_action == "link":
                     Print.Custom("OUTPUT", "Create link: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
                     os.symlink(os.path.abspath(file), outputPath)
+                elif self.file_action == "hlink":
+                    Print.Custom("OUTPUT", "Create hard link: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
+                    os.link(os.path.abspath(file), outputPath)
                 elif self.file_action == "copy":
                     Print.Custom("OUTPUT", "Copy file: {}".format(outputPath), title_color=Print.COLOR_GREEN, start="\t", always_print=True)
                     self._transfertFile(file, outputPath, doMove=False)
@@ -201,7 +204,7 @@ class ParseSeries:
         serieEpisode = SeriesEpisodes.SerieEpisode.findEpisodeByFileName(basename)
 
         if serieEpisode:
-            Print.Custom(f"MATCH", "File match: Serie '{serieEpisode}'", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
+            Print.Custom(f"MATCH", f"File match: Serie '{serieEpisode}'", title_color=Print.COLOR_GREEN, start="\t", always_print=True)
 
 
             self._doActionOnFile(fileName, serieEpisode)
@@ -209,7 +212,7 @@ class ParseSeries:
             if not serieEpisode.serie.id in self._updated_serie_list:
                 self._updated_serie_list += [serieEpisode.serie.id]
         else:
-            Print.Custom("MATCH", "File not match: {}".format(basename), title_color=Print.COLOR_RED, start="\t")
+            Print.Custom("MATCH", f"File not match: {basename}", title_color=Print.COLOR_RED, start="\t")
             self._writeLogFile("File not match", fileName)
 
     def _scanDir(self, basedir):
