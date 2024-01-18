@@ -27,6 +27,66 @@ class Serie:
 
 
     @staticmethod
+    def searchSerieOnTvDB(name, year):
+        if Serie.tvdb:
+            if year != None:
+                resultList = Serie.tvdb.search(name, type="series", year=year)
+            else:
+                resultList = Serie.tvdb.search(name, type="series")
+
+            if len(resultList) == 0:
+                return None
+
+            elif len(resultList) > 1:
+                levenshtein = Levenshtein()
+                min_distance = math.inf
+
+                COEF_POSITION    = 0.5  # Add to the distance on every position result
+                COEF_EXIST_SERIES =  5  # Remove to distance if series is on the local data base
+                COEF_ALIASES     = 0.1  # Add to distance if is an alias and not the main name.
+                COEF_TRANSLATE   = 0.2  # Add to distance if is a translate name and not the original
+
+
+                position = 0
+
+                for tmp_result in resultList:
+                    #print(tmp_result)
+                    distance = levenshtein.distance(name, tmp_result["name"]) + ( position * COEF_POSITION )
+
+                    for series in Serie.seriesList:
+                        if series == int(tmp_result["tvdb_id"]):
+                            distance -= COEF_EXIST_SERIE
+
+                    if min_distance > distance :
+                        result = tmp_result
+                        min_distance = distance
+
+                    if "aliases" in tmp_result:
+                        for aliases in tmp_result["aliases"]:
+                            distance = levenshtein.distance(name, aliases) + 0.1
+
+                            if min_distance > distance :
+                                result = tmp_result
+                                min_distance = distance
+                    
+                    if "translations" in tmp_result:
+                        for translation in tmp_result["translations"]:
+                            trans_title = tmp_result['translations'][translation]
+                            distance = levenshtein.distance(name, trans_title) + 0.2
+
+                            if min_distance > distance :
+                                result = tmp_result
+                                min_distance = distance
+
+                    position += 1
+                        
+            else:
+                result = resultList[0]
+            
+            return result
+
+        
+    @staticmethod
     def findSerieByName(name, year=None):
 
         for serie in Serie.seriesList:
@@ -34,63 +94,13 @@ class Serie:
                 return serie
 
         if Serie.tvdb:
-            if year != None:
-                resultList = Serie.tvdb.search(name, type="series", year=year)
-            else:
-                resultList = Serie.tvdb.search(name, type="series")
 
-            serieFountTvdb = None
-
-            if len(resultList) > 0:
-                if len(resultList) > 1:
-                    levenshtein = Levenshtein()
-                    min_distance = math.inf
-                    for tmp_result in resultList:
-                        #print(tmp_result)
-                        distance = levenshtein.distance(name, tmp_result["name"])
-
-                        for serie in Serie.seriesList:
-                            if serie == int(tmp_result["tvdb_id"]):
-                                return serie
-
-                        if min_distance > distance :
-                            result = tmp_result
-                            min_distance = distance
-
-                        if "aliases" in tmp_result:
-                            for aliase in tmp_result["aliases"]:
-                                distance = levenshtein.distance(name, aliase) + 0.1
-
-                                if min_distance > distance :
-                                    result = tmp_result
-                                    min_distance = distance
-                        
-                        if "translations" in tmp_result:
-                            for translation in tmp_result["translations"]:
-                                trans_title = tmp_result['translations'][translation]
-                                distance = levenshtein.distance(name, trans_title) + 0.2
-
-                                if min_distance > distance :
-                                    result = tmp_result
-                                    min_distance = distance
-                            
-                else:
-                    result = resultList[0]
-                
-                Print.Custom("Serie", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(
-                    result["id"], result["slug"], result["name"], result["slug"]), title_color=Print.COLOR_GREEN, start="\t")
-                serieFountTvdb = result
-            else:
-                Print.Custom("Serie", "Serie not found: '{}'".format(name), title_color=Print.COLOR_RED, start="\t")
-                if year:
-                    return Serie.findSerieByName(name)
-
-                for tag in tag_list:
-                    if re.search(tag, name, flags=re.I):
-                        name = re.sub(tag, "", name, flags=re.I)
-                        return Serie.findSerieByName(name)
+            serieFountTvdb = Serie.searchSerieOnTvDB(name, year)
 
             if serieFountTvdb:
+
+                Print.Custom("Serie", "Serie found: id='{}' slug='{}' name='{}' url='https://thetvdb.com/series/{}'".format(
+                serieFountTvdb["id"], serieFountTvdb["slug"], serieFountTvdb["name"], serieFountTvdb["slug"]), title_color=Print.COLOR_GREEN, start="\t")
 
                 for serie in Serie.seriesList:
                     if serie == int(serieFountTvdb["tvdb_id"]):
@@ -101,7 +111,15 @@ class Serie:
 
                 return newSerie
             else:
-                Print.Error(f"[Serie] Serie not found {name}")
+                Print.Custom("Serie", "Serie not found: '{}'".format(name), title_color=Print.COLOR_RED, start="\t")
+                if year:
+                    return Serie.findSerieByName(name)
+
+                for tag in tag_list:
+                    if re.search(tag, name, flags=re.I):
+                        name = re.sub(tag, "", name, flags=re.I)
+                        return Serie.findSerieByName(name)
+
                 return None
         else:
             Print.Error("[Serie] TVDB not initialised")
