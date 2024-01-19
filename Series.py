@@ -60,23 +60,23 @@ class Serie:
                     if min_distance > distance :
                         result = tmp_result
                         min_distance = distance
+                    else:
+                        if "aliases" in tmp_result:
+                            for aliases in tmp_result["aliases"]:
+                                distance = levenshtein.distance(name, aliases) + ( position * COEF_POSITION ) + COEF_ALIASES
 
-                    if "aliases" in tmp_result:
-                        for aliases in tmp_result["aliases"]:
-                            distance = levenshtein.distance(name, aliases) + COEF_ALIASES
+                                if min_distance > distance :
+                                    result = tmp_result
+                                    min_distance = distance
+                        
+                        if "translations" in tmp_result:
+                            for translation in tmp_result["translations"]:
+                                trans_title = tmp_result['translations'][translation]
+                                distance = levenshtein.distance(name, trans_title) + ( position * COEF_POSITION ) + COEF_TRANSLATE
 
-                            if min_distance > distance :
-                                result = tmp_result
-                                min_distance = distance
-                    
-                    if "translations" in tmp_result:
-                        for translation in tmp_result["translations"]:
-                            trans_title = tmp_result['translations'][translation]
-                            distance = levenshtein.distance(name, trans_title) + COEF_TRANSLATE
-
-                            if min_distance > distance :
-                                result = tmp_result
-                                min_distance = distance
+                                if min_distance > distance :
+                                    result = tmp_result
+                                    min_distance = distance
 
                     position += 1
                         
