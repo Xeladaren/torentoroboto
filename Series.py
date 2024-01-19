@@ -55,7 +55,7 @@ class Serie:
 
                     for series in Serie.seriesList:
                         if series == int(tmp_result["tvdb_id"]):
-                            distance -= COEF_EXIST_SERIE
+                            distance -= COEF_EXIST_SERIES
 
                     if min_distance > distance :
                         result = tmp_result
@@ -63,7 +63,7 @@ class Serie:
 
                     if "aliases" in tmp_result:
                         for aliases in tmp_result["aliases"]:
-                            distance = levenshtein.distance(name, aliases) + 0.1
+                            distance = levenshtein.distance(name, aliases) + COEF_ALIASES
 
                             if min_distance > distance :
                                 result = tmp_result
@@ -72,7 +72,7 @@ class Serie:
                     if "translations" in tmp_result:
                         for translation in tmp_result["translations"]:
                             trans_title = tmp_result['translations'][translation]
-                            distance = levenshtein.distance(name, trans_title) + 0.2
+                            distance = levenshtein.distance(name, trans_title) + COEF_TRANSLATE
 
                             if min_distance > distance :
                                 result = tmp_result
